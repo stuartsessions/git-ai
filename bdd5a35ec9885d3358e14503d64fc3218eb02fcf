@@ -1,0 +1,23 @@
+src/authorship/rebase_authorship.rs
+  d08fd23781da395e 13-35,518,718,786
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.1",
+  "base_commit_sha": "bdd5a35ec9885d3358e14503d64fc3218eb02fcf",
+  "prompts": {
+    "d08fd23781da395e": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "e3767d80-02c5-4d49-8e5c-407118bd0b06",
+        "model": "unknown"
+      },
+      "human_author": "Stuart Sessions <ssessions1@gmail.com>",
+      "messages": [],
+      "total_additions": 29,
+      "total_deletions": 4,
+      "accepted_lines": 26,
+      "overriden_lines": 0
+    }
+  }
+}
