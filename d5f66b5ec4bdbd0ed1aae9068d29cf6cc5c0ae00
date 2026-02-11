@@ -1,0 +1,23 @@
+.dockerignore
+  aca98faafa409557 1-7
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.1",
+  "base_commit_sha": "d5f66b5ec4bdbd0ed1aae9068d29cf6cc5c0ae00",
+  "prompts": {
+    "aca98faafa409557": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "a9f84093-8021-449b-9c26-3a69057dd811",
+        "model": "unknown"
+      },
+      "human_author": "Stuart Sessions <ssessions1@gmail.com>",
+      "messages": [],
+      "total_additions": 40,
+      "total_deletions": 0,
+      "accepted_lines": 7,
+      "overriden_lines": 0
+    }
+  }
+}
