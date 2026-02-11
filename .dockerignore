@@ -1,0 +1,7 @@
+# Exclude Rust build artifacts
+/target
+**/target
+
+# Git and VCS
+.git
+.git/**

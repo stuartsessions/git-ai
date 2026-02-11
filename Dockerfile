@@ -22,7 +22,6 @@ RUN apt-get update && apt-get install -y \
    build-essential && \
    apt-get clean
 
-RUN curl -sSL https://usegitai.com/install.sh | bash
 # Expose the application port
 EXPOSE $APP_PORT
 # Define the default command to run the application
