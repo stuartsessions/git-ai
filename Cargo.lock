@@ -480,6 +480,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b05b61dc5112cbb17e4b6cd61790d9845d13888356391624cbe7e41efeac1e75"
 
 [[package]]
+name = "common"
+version = "0.0.1"
+dependencies = [
+ "git2",
+ "rusqlite",
+ "serde_json",
+]
+
+[[package]]
 name = "compact_str"
 version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1087,6 +1096,7 @@ dependencies = [
  "assert_cmd",
  "chrono",
  "clap",
+ "common",
  "crossterm",
  "dirs",
  "envy",
