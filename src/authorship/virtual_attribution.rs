@@ -378,6 +378,12 @@ impl VirtualAttributions {
 
             // Collect attributions from checkpoint entries
             for entry in &checkpoint.entries {
+                // Most human-only pre-commit entries carry no attribution data and can be skipped.
+                // This keeps post-commit work proportional to AI-relevant files.
+                if entry.line_attributions.is_empty() && entry.attributions.is_empty() {
+                    continue;
+                }
+
                 // Get the latest file content from working directory
                 if let Ok(workdir) = repo.workdir() {
                     let abs_path = workdir.join(&entry.file);
@@ -389,9 +395,22 @@ impl VirtualAttributions {
                     file_contents.insert(entry.file.clone(), file_content);
                 }
 
-                // Use the line attributions from the checkpoint
-                let line_attrs = entry.line_attributions.clone();
+                // Prefer persisted line attributions. Fall back to converting char attributions
+                // for compatibility with older checkpoint data.
                 let file_content = file_contents.get(&entry.file).cloned().unwrap_or_default();
+                let line_attrs = if entry.line_attributions.is_empty() {
+                    crate::authorship::attribution_tracker::attributions_to_line_attributions(
+                        &entry.attributions,
+                        &file_content,
+                    )
+                } else {
+                    entry.line_attributions.clone()
+                };
+
+                if line_attrs.is_empty() {
+                    continue;
+                }
+
                 let char_attrs = line_attributions_to_attributions(&line_attrs, &file_content, 0);
 
                 attributions.insert(entry.file.clone(), (char_attrs, line_attrs));
@@ -522,70 +541,53 @@ impl VirtualAttributions {
                 continue;
             }
 
-            // Group line attributions by author
-            let mut author_lines: HashMap<String, Vec<u32>> = HashMap::new();
+            // Group line attributions by author as intervals.
+            // This avoids expanding every range to individual line numbers.
+            let mut author_ranges: HashMap<String, Vec<(u32, u32)>> = HashMap::new();
             for line_attr in line_attrs {
                 // Skip human attributions - we only track AI attributions
                 if line_attr.author_id == CheckpointKind::Human.to_str() {
                     continue;
                 }
 
-                for line in line_attr.start_line..=line_attr.end_line {
-                    author_lines
-                        .entry(line_attr.author_id.clone())
-                        .or_default()
-                        .push(line);
-                }
+                author_ranges
+                    .entry(line_attr.author_id.clone())
+                    .or_default()
+                    .push((line_attr.start_line, line_attr.end_line));
             }
 
             // Create attestation entries for each author
-            for (author_id, mut lines) in author_lines {
-                lines.sort();
-                lines.dedup();
-
-                if lines.is_empty() {
+            for (author_id, mut ranges) in author_ranges {
+                if ranges.is_empty() {
                     continue;
                 }
+                ranges.sort_by_key(|(start, end)| (*start, *end));
 
-                // Create line ranges
-                let mut ranges = Vec::new();
-                let mut range_start = lines[0];
-                let mut range_end = lines[0];
-
-                for &line in &lines[1..] {
-                    if line == range_end + 1 {
-                        range_end = line;
-                    } else {
-                        if range_start == range_end {
-                            ranges.push(crate::authorship::authorship_log::LineRange::Single(
-                                range_start,
-                            ));
-                        } else {
-                            ranges.push(crate::authorship::authorship_log::LineRange::Range(
-                                range_start,
-                                range_end,
-                            ));
+                let mut merged: Vec<(u32, u32)> = Vec::new();
+                for (start, end) in ranges {
+                    match merged.last_mut() {
+                        Some((_, last_end)) if start <= last_end.saturating_add(1) => {
+                            *last_end = (*last_end).max(end);
                         }
-                        range_start = line;
-                        range_end = line;
+                        _ => merged.push((start, end)),
                     }
                 }
 
-                // Add the last range
-                if range_start == range_end {
-                    ranges.push(crate::authorship::authorship_log::LineRange::Single(
-                        range_start,
-                    ));
-                } else {
-                    ranges.push(crate::authorship::authorship_log::LineRange::Range(
-                        range_start,
-                        range_end,
-                    ));
-                }
+                let line_ranges = merged
+                    .into_iter()
+                    .map(|(start, end)| {
+                        if start == end {
+                            crate::authorship::authorship_log::LineRange::Single(start)
+                        } else {
+                            crate::authorship::authorship_log::LineRange::Range(start, end)
+                        }
+                    })
+                    .collect();
 
                 // Create attestation entry
                 let entry = crate::authorship::authorship_log_serialization::AttestationEntry::new(
-                    author_id, ranges,
+                    author_id,
+                    line_ranges,
                 );
 
                 // Add to authorship log
