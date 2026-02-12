@@ -5,7 +5,7 @@ use crate::authorship::working_log::{AgentId, CheckpointKind};
 use crate::commands;
 use crate::commands::checkpoint_agent::agent_presets::{
     AgentCheckpointFlags, AgentCheckpointPreset, AgentRunResult, AiTabPreset, ClaudePreset,
-    ContinueCliPreset, CursorPreset, DroidPreset, GeminiPreset, GithubCopilotPreset,
+    CodexPreset, ContinueCliPreset, CursorPreset, DroidPreset, GeminiPreset, GithubCopilotPreset,
 };
 use crate::commands::checkpoint_agent::agent_v1_preset::AgentV1Preset;
 use crate::commands::checkpoint_agent::opencode_preset::OpenCodePreset;
@@ -36,7 +36,8 @@ pub fn handle_git_ai(args: &[String]) {
 
     // Start DB warmup early for commands that need database access
     match args[0].as_str() {
-        "checkpoint" | "show-prompt" | "share" | "sync-prompts" | "flush-cas" => {
+        "checkpoint" | "show-prompt" | "share" | "sync-prompts" | "flush-cas" | "search"
+        | "continue" => {
             InternalDatabase::warmup();
         }
         _ => {}
@@ -162,6 +163,12 @@ pub fn handle_git_ai(args: &[String]) {
         "prompts" => {
             commands::prompts_db::handle_prompts(&args[1..]);
         }
+        "search" => {
+            commands::search::handle_search(&args[1..]);
+        }
+        "continue" => {
+            commands::continue_session::handle_continue(&args[1..]);
+        }
         #[cfg(debug_assertions)]
         "show-transcript" => {
             handle_show_transcript(&args[1..]);
@@ -180,7 +187,9 @@ fn print_help() {
     eprintln!();
     eprintln!("Commands:");
     eprintln!("  checkpoint         Checkpoint working changes and attribute author");
-    eprintln!("    Presets: claude, continue-cli, cursor, gemini, github-copilot, ai_tab, mock_ai");
+    eprintln!(
+        "    Presets: claude, codex, continue-cli, cursor, gemini, github-copilot, ai_tab, mock_ai"
+    );
     eprintln!(
         "    --hook-input <json|stdin>   JSON payload required by presets, or 'stdin' to read from stdin"
     );
@@ -236,6 +245,29 @@ fn print_help() {
     eprintln!("    list                  List prompts as TSV");
     eprintln!("    next                  Get next prompt as JSON (iterator pattern)");
     eprintln!("    reset                 Reset iteration pointer to start");
+    eprintln!("  search             Search AI prompt history");
+    eprintln!("    --commit <rev>        Search by commit (SHA, branch, tag, symbolic ref)");
+    eprintln!("    --file <path>         Search by file path");
+    eprintln!("    --lines <start-end>   Limit to line range (requires --file; repeatable)");
+    eprintln!("    --pattern <text>      Full-text search in prompt messages");
+    eprintln!("    --prompt-id <id>      Look up specific prompt");
+    eprintln!("    --tool <name>         Filter by AI tool (claude, cursor, etc.)");
+    eprintln!("    --author <name>       Filter by human author");
+    eprintln!("    --since <time>        Only prompts after this time");
+    eprintln!("    --until <time>        Only prompts before this time");
+    eprintln!("    --json                Output as JSON");
+    eprintln!("    --verbose             Include full transcripts");
+    eprintln!("    --porcelain           Stable machine-parseable format");
+    eprintln!("    --count               Just show result count");
+    eprintln!("  continue           Restore AI session context and launch agent");
+    eprintln!("    --commit <rev>        Continue from a specific commit");
+    eprintln!("    --file <path>         Continue from a specific file");
+    eprintln!("    --lines <start-end>   Limit to line range (requires --file)");
+    eprintln!("    --prompt-id <id>      Continue from a specific prompt");
+    eprintln!("    --agent <name>        Select agent (claude, cursor; default: claude)");
+    eprintln!("    --launch              Launch agent CLI with restored context");
+    eprintln!("    --clipboard           Copy context to system clipboard");
+    eprintln!("    --json                Output context as structured JSON");
     eprintln!("  login              Authenticate with Git AI");
     eprintln!("  logout             Clear stored credentials");
     eprintln!("  version, -v, --version     Print the git-ai version");
@@ -315,6 +347,22 @@ fn handle_checkpoint(args: &[String]) {
                     }
                     Err(e) => {
                         eprintln!("Claude preset error: {}", e);
+                        std::process::exit(0);
+                    }
+                }
+            }
+            "codex" => {
+                match CodexPreset.run(AgentCheckpointFlags {
+                    hook_input: hook_input.clone(),
+                }) {
+                    Ok(agent_run) => {
+                        if agent_run.repo_working_dir.is_some() {
+                            repository_working_dir = agent_run.repo_working_dir.clone().unwrap();
+                        }
+                        agent_run_result = Some(agent_run);
+                    }
+                    Err(e) => {
+                        eprintln!("Codex preset error: {}", e);
                         std::process::exit(0);
                     }
                 }
@@ -997,7 +1045,7 @@ fn handle_show_transcript(args: &[String]) {
     if args.len() < 2 {
         eprintln!("Error: show-transcript requires agent name and path/id");
         eprintln!("Usage: git-ai show-transcript <agent> <path|id>");
-        eprintln!("  Agents: claude, gemini, continue-cli, github-copilot, cursor");
+        eprintln!("  Agents: claude, codex, gemini, continue-cli, github-copilot, cursor");
         eprintln!("  For cursor, provide conversation_id instead of path");
         std::process::exit(1);
     }
@@ -1013,6 +1061,13 @@ fn handle_show_transcript(args: &[String]) {
             Ok((transcript, model)) => Ok((transcript, model)),
             Err(e) => {
                 eprintln!("Error loading Claude transcript: {}", e);
+                std::process::exit(1);
+            }
+        },
+        "codex" => match CodexPreset::transcript_and_model_from_codex_rollout_jsonl(path_or_id) {
+            Ok((transcript, model)) => Ok((transcript, model)),
+            Err(e) => {
+                eprintln!("Error loading Codex transcript: {}", e);
                 std::process::exit(1);
             }
         },
@@ -1052,7 +1107,9 @@ fn handle_show_transcript(args: &[String]) {
         },
         _ => {
             eprintln!("Error: Unknown agent '{}'", agent_name);
-            eprintln!("Supported agents: claude, gemini, continue-cli, github-copilot, cursor");
+            eprintln!(
+                "Supported agents: claude, codex, gemini, continue-cli, github-copilot, cursor"
+            );
             std::process::exit(1);
         }
     };
