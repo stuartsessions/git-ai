@@ -1,6 +1,7 @@
 [package]
 name = "common"
 version = "0.0.1"
+edition = "2024"
 
 [features]
 test-support = ["dep:git2"]
@@ -8,5 +9,5 @@ test-support = ["dep:git2"]
 [dependencies]
 serde_json = { workspace = true}
 git2 = { workspace = true, optional = true }
-
+url = {workspace = true } # added to common crate
 rusqlite = { workspace = true }

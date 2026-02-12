@@ -486,6 +486,7 @@ dependencies = [
  "git2",
  "rusqlite",
  "serde_json",
+ "url",
 ]
 
 [[package]]
