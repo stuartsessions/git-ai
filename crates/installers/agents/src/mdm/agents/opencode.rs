@@ -7,7 +7,7 @@ use std::path::{Path, PathBuf};
 // OpenCode plugin content (TypeScript), embedded from the source file
 const OPENCODE_PLUGIN_CONTENT: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
-    "/../../crates/git-ai/agent-support/opencode/git-ai.ts"
+    "/../../git-ai/agent-support/opencode/git-ai.ts"
 ));
 
 pub struct OpenCodeInstaller;
