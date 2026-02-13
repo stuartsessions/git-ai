@@ -4,3 +4,6 @@
 .idea/
 .performance-repos/
 prompts.db
+
+#Cargo config file
+.cargo/

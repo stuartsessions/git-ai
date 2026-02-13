@@ -1,5 +1,7 @@
 # Dev environment for Git-ai
-
+# Usage/Limitations:
+# 1. This will not pass the 'git::authorship_traversal::tests::test_load_ai_touched_files_for_specific_commits'
+# test due to no connection to Github
 # Specify the base image
 FROM rust:latest
 # Add metadata to the image
@@ -17,6 +19,7 @@ COPY . .
 RUN apt-get update && apt-get install -y \
    pkg-config \
    libssl-dev \
+   libgit2-dev \
    mold \
    clang \
    build-essential && \

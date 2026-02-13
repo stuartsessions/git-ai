@@ -1,0 +1,9 @@
+# .cargo/config.toml
+
+[env]
+# Sets the environment variable for both the build and the running test.
+# "relative = true" resolves "target" relative to this config file's location (workspace root).
+CARGO_TARGET_DIR = { value = "target", relative = true }
+
+# Use system-installed libgit2 for git2 crate to speed up builds and reduce binary size.
+LIBGIT2_SYS_USE_PKG_CONFIG = "1"
