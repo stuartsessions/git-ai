@@ -2,8 +2,8 @@
 members = [
     "crates/git-ai",
     "crates/common",
-    "installers/agents",
-    "installers/git_clients",
+    "crates/installers/agents",
+    "crates/installers/git_clients",
 ]
 resolver = "3"
 
