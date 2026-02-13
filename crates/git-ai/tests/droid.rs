@@ -1,6 +1,6 @@
 #[macro_use]
 mod repos;
-mod test_utils;
+mod common;
 
 use git_ai::authorship::transcript::Message;
 use git_ai::authorship::working_log::CheckpointKind;
@@ -11,7 +11,7 @@ use serde_json::json;
 use std::fs;
 use std::io::Write;
 use tempfile::NamedTempFile;
-use test_utils::fixture_path;
+use common::fixture_path;
 
 #[test]
 fn test_parse_droid_jsonl_transcript() {

@@ -7,13 +7,13 @@
 
 #[macro_use]
 mod repos;
-mod test_utils;
+mod common;
 
 use repos::test_repo::TestRepo;
 use rusqlite::Connection;
 use serde_json::json;
 use std::fs;
-use test_utils::fixture_path;
+use common::fixture_path;
 
 /// Helper to open a connection to the test database
 fn open_test_db(repo: &TestRepo) -> Connection {
