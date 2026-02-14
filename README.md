@@ -29,7 +29,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -Command "irm https://usegitai.com
 
 🎊 That's it! **No per-repo setup.** Once installed Git AI will work OOTB with any of these **Supported Agents**:
 
-<img width="943" height="360" alt="all-agents" src="https://github.com/user-attachments/assets/c685bf94-dccb-43b8-be14-c5725a61d380" />
+<img width="933" height="364" alt="code-tracking" src="https://github.com/user-attachments/assets/99ab05b1-97a9-4100-8ade-8ea8a227627b" />
 
 ### Documentation https://usegitai.com/docs
 - [AI Blame](https://usegitai.com/docs/cli/ai-blame)
@@ -72,8 +72,8 @@ The format of the notes is outlined here in the [Git AI Standard v3.0.0](https:/
 | Agent/IDE                                                                                  | Authorship | Prompts |
 | ------------------------------------------------------------------------------------------ | ---------- | ------- |
 | Claude Code                                                                                | ✅         | ✅      |
-| OpenAI Codex &gt;0.99.0 (currently alpha release)                                          | ✅         | ✅      |
-| Cursor &gt;1.7                                                                             | ✅         | ✅      |
+| OpenAI Codex                                                                               | ✅         | ✅      |
+| Cursor                                                                                     | ✅         | ✅      |
 | GitHub Copilot in VSCode via Extension                                                     | ✅         | ✅      |
 | OpenCode                                                                                   | ✅         | ✅      |
 | Google Gemini CLI                                                                          | ✅         | ✅      |

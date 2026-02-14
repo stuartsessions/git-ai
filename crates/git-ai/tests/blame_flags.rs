@@ -689,13 +689,15 @@ fn test_blame_contents_from_stdin() {
     let lines = git_ai_output.lines().collect::<Vec<&str>>();
 
     assert!(
-        lines[0].starts_with("0000000 (External file (--contents)"),
-        "First line should be the  --contents"
+        lines[0].starts_with("0000000 (Not Committed Yet"),
+        "First line should be from --contents (uncommitted). Got: {}",
+        lines[0]
     );
 
     assert!(
-        lines[3].starts_with("0000000 (External file (--contents)"),
-        "Last line should be the --contents"
+        lines[3].starts_with("0000000 (Not Committed Yet"),
+        "Last line should be from --contents (uncommitted). Got: {}",
+        lines[3]
     );
 }
 
