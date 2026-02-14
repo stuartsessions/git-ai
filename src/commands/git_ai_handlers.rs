@@ -1,3 +1,4 @@
+use crate::authorship::ignore::effective_ignore_patterns;
 use crate::authorship::internal_db::InternalDatabase;
 use crate::authorship::range_authorship;
 use crate::authorship::stats::stats_command;
@@ -880,6 +881,16 @@ fn handle_ai_blame(args: &[String]) {
         std::process::exit(1);
     }
 
+    let file_path = if !std::path::Path::new(&file_path).is_absolute() {
+        let current_dir_path = std::path::PathBuf::from(&current_dir);
+        current_dir_path
+            .join(&file_path)
+            .to_string_lossy()
+            .to_string()
+    } else {
+        file_path
+    };
+
     if let Err(e) = repo.blame(&file_path, &options) {
         eprintln!("Blame failed: {}", e);
         std::process::exit(1);
@@ -993,9 +1004,11 @@ fn handle_stats(args: &[String]) {
         }
     }
 
+    let effective_patterns = effective_ignore_patterns(&repo, &ignore_patterns, &[]);
+
     // Handle commit range if detected
     if let Some(range) = commit_range {
-        match range_authorship::range_authorship(range, false, &ignore_patterns) {
+        match range_authorship::range_authorship(range, false, &effective_patterns) {
             Ok(stats) => {
                 if json_output {
                     let json_str = serde_json::to_string(&stats).unwrap();
@@ -1012,7 +1025,12 @@ fn handle_stats(args: &[String]) {
         return;
     }
 
-    if let Err(e) = stats_command(&repo, commit_sha.as_deref(), json_output, &ignore_patterns) {
+    if let Err(e) = stats_command(
+        &repo,
+        commit_sha.as_deref(),
+        json_output,
+        &effective_patterns,
+    ) {
         match e {
             crate::error::GitAiError::Generic(msg) if msg.starts_with("No commit found:") => {
                 eprintln!("{}", msg);
