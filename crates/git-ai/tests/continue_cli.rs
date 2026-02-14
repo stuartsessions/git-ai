@@ -1,6 +1,6 @@
 #[macro_use]
 mod repos;
-mod test_utils;
+mod common;
 
 use git_ai::authorship::transcript::Message;
 use git_ai::commands::checkpoint_agent::agent_presets::{
@@ -11,7 +11,7 @@ use repos::test_repo::TestRepo;
 use serde_json::json;
 use std::fs;
 use std::io::Write;
-use test_utils::fixture_path;
+use common::fixture_path;
 
 #[test]
 fn test_parse_example_continue_cli_json() {

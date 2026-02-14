@@ -1,10 +1,10 @@
-mod test_utils;
+mod common;
 
 use git_ai::authorship::transcript::Message;
 use git_ai::commands::checkpoint_agent::agent_presets::GithubCopilotPreset;
 use serde_json::json;
 use std::io::Write;
-use test_utils::fixture_path;
+use common::fixture_path;
 
 /// Ensure CODESPACES and REMOTE_CONTAINERS are not set (they cause early return in transcript parsing)
 fn ensure_clean_env() {

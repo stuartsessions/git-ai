@@ -1,6 +1,6 @@
 #[macro_use]
 mod repos;
-mod test_utils;
+mod common;
 
 use git_ai::authorship::authorship_log::LineRange;
 use repos::test_file::ExpectedLineExt;

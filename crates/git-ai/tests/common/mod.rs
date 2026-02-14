@@ -6,7 +6,7 @@ use std::path::PathBuf;
 ///
 /// # Example
 /// ```no_run
-/// use test_utils::fixture_path;
+/// use common::fixture_path;
 ///
 /// let path = fixture_path("example.json");
 /// // Returns: /path/to/project/tests/fixtures/example.json
@@ -19,7 +19,7 @@ pub fn fixture_path(filename: &str) -> PathBuf {
 ///
 /// # Example
 /// ```no_run
-/// use test_utils::load_fixture;
+/// use common::load_fixture;
 ///
 /// let contents = load_fixture("example.json");
 /// // Returns the string contents of tests/fixtures/example.json

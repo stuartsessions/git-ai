@@ -2,6 +2,8 @@
 members = [
     "crates/git-ai",
     "crates/common",
+    "crates/installers/agents",
+    "crates/installers/git_clients",
 ]
 resolver = "3"
 
@@ -14,6 +16,8 @@ debug = 1      # Limits debug info (faster link time)
 [workspace.dependencies]
 # common package should always be included from root, since it's accessed by everything.
 common = { path = "crates/common" }
+installers-agents = { path = "crates/installers/agents" }
+installers-git-clients = { path = "crates/installers/git_clients" }
 serde = {version = "1.0", features = ["derive"] }
 envy = "0.4"
 serde_json = "1.0"

@@ -13,3 +13,5 @@ serde_json = { workspace = true}
 git2 = { workspace = true, optional = true }
 url = {workspace = true } # added to common crate
 rusqlite = { workspace = true }
+libc = "0.2"
+tempfile = "3.8"

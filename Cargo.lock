@@ -485,9 +485,11 @@ version = "0.0.1"
 dependencies = [
  "envy",
  "git2",
+ "libc",
  "rusqlite",
  "serde",
  "serde_json",
+ "tempfile",
  "url",
 ]
 
@@ -1112,6 +1114,8 @@ dependencies = [
  "imara-diff",
  "indicatif",
  "insta",
+ "installers-agents",
+ "installers-git-clients",
  "jsonc-parser",
  "keyring",
  "libc",
@@ -1696,6 +1700,32 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "installers-agents"
+version = "0.1.0"
+dependencies = [
+ "common",
+ "dirs",
+ "jsonc-parser",
+ "minreq",
+ "serde_json",
+ "serial_test",
+ "tempfile",
+ "toml",
+ "zip",
+]
+
+[[package]]
+name = "installers-git-clients"
+version = "0.1.0"
+dependencies = [
+ "common",
+ "dirs",
+ "installers-agents",
+ "jsonc-parser",
+ "serde_json",
 ]
 
 [[package]]

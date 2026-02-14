@@ -1,11 +1,11 @@
 #[macro_use]
 mod repos;
-mod test_utils;
+mod common;
 
 use repos::test_file::ExpectedLineExt;
 use repos::test_repo::TestRepo;
 use rusqlite::{Connection, OpenFlags};
-use test_utils::fixture_path;
+use common::fixture_path;
 
 const TEST_CONVERSATION_ID: &str = "00812842-49fe-4699-afae-bb22cda3f6e1";
 

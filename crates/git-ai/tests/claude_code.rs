@@ -1,6 +1,6 @@
 #[macro_use]
 mod repos;
-mod test_utils;
+mod common;
 
 use git_ai::authorship::transcript::Message;
 use git_ai::commands::checkpoint_agent::agent_presets::{
@@ -8,7 +8,7 @@ use git_ai::commands::checkpoint_agent::agent_presets::{
 };
 use serde_json::json;
 use std::fs;
-use test_utils::fixture_path;
+use common::fixture_path;
 
 #[test]
 fn test_parse_example_claude_code_jsonl_with_model() {
