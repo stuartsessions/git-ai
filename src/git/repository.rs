@@ -9,6 +9,7 @@ use crate::git::repo_storage::RepoStorage;
 use crate::git::rewrite_log::RewriteLogEvent;
 use crate::git::status::MAX_PATHSPEC_ARGS;
 use crate::git::sync_authorship::{fetch_authorship_notes, push_authorship_notes};
+use crate::utils::GIT_AI_SKIP_CORE_HOOKS_ENV;
 #[cfg(windows)]
 use crate::utils::is_interactive_terminal;
 
@@ -1406,6 +1407,7 @@ impl Repository {
 
             let old_tip: Option<String> = match Command::new(config::Config::get().git_cmd())
                 .args(&rp_args)
+                .env(GIT_AI_SKIP_CORE_HOOKS_ENV, "1")
                 .output()
             {
                 Ok(output) if output.status.success() => {
@@ -1958,17 +1960,32 @@ pub fn find_repository(global_args: &[String]) -> Result<Repository, GitAiError>
         )));
     }
 
-    // Ensure all internal git commands use the repository root consistently
-    // When running from a subdirectory without -C, add it to ensure hooks work correctly
+    // Ensure all internal git commands use the repository root consistently.
+    // If global args contain other flags (for example `-c core.hooksPath=...`) but no `-C`,
+    // add `-C <repo_root>` so all hook side effects resolve paths from the same base.
     let mut global_args = global_args.to_owned();
     let workdir_str = workdir.display().to_string();
 
-    if global_args.is_empty() {
-        // Add -C flag when not present (e.g., when running from subdirectory)
-        global_args = vec!["-C".to_string(), workdir_str];
-    } else if global_args.len() == 2 && global_args[0] == "-C" && global_args[1] != workdir_str {
-        // Rewrite existing -C to repo root if it points elsewhere
-        global_args[1] = workdir_str;
+    let mut c_arg_index: Option<usize> = None;
+    for (i, arg) in global_args.iter().enumerate() {
+        if arg == "-C" {
+            c_arg_index = Some(i + 1);
+            break;
+        }
+    }
+
+    if let Some(path_index) = c_arg_index {
+        if path_index < global_args.len() {
+            if global_args[path_index] != workdir_str {
+                global_args[path_index] = workdir_str;
+            }
+        } else {
+            // Malformed global args with trailing `-C`; recover by appending repo root.
+            global_args.push(workdir_str);
+        }
+    } else {
+        global_args.push("-C".to_string());
+        global_args.push(workdir_str);
     }
 
     // Canonicalize workdir for reliable path comparisons (especially on Windows)
@@ -2155,6 +2172,7 @@ pub fn exec_git(args: &[String]) -> Result<Output, GitAiError> {
     // TODO Make sure to handle process signals, etc.
     let mut cmd = Command::new(config::Config::get().git_cmd());
     cmd.args(args);
+    cmd.env(GIT_AI_SKIP_CORE_HOOKS_ENV, "1");
 
     #[cfg(windows)]
     {
@@ -2183,6 +2201,7 @@ pub fn exec_git_stdin(args: &[String], stdin_data: &[u8]) -> Result<Output, GitA
     // TODO Make sure to handle process signals, etc.
     let mut cmd = Command::new(config::Config::get().git_cmd());
     cmd.args(args)
+        .env(GIT_AI_SKIP_CORE_HOOKS_ENV, "1")
         .stdin(std::process::Stdio::piped())
         .stdout(std::process::Stdio::piped())
         .stderr(std::process::Stdio::piped());
@@ -2228,6 +2247,7 @@ pub fn exec_git_stdin_with_env(
     // TODO Make sure to handle process signals, etc.
     let mut cmd = Command::new(config::Config::get().git_cmd());
     cmd.args(args)
+        .env(GIT_AI_SKIP_CORE_HOOKS_ENV, "1")
         .stdin(std::process::Stdio::piped())
         .stdout(std::process::Stdio::piped())
         .stderr(std::process::Stdio::piped());
