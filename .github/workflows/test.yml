@@ -9,8 +9,8 @@ on:
     branches: [main]
 
 jobs:
-  test:
-    name: Test on ${{ matrix.os }}
+  build:
+    name: build for ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -41,13 +41,88 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-
 
-      - name: Run tests
-        run: cargo test -- --test-threads=8
-        env:
-          CARGO_INCREMENTAL: 0
+      # COMPILE EVERYTHING
+      # --no-run: Compiles the test binaries but doesn't execute them.
+      # --locked: Ensures Cargo.lock isn't changed.
+      - name: Build Tests
+        run: cargo test -- --no-run --locked --test-threads=8
+
+  # --------------------------------------------------------------------------
+  # JOB 2: UNIT TESTS (Standard Runner)
+  # Reuses the artifacts from 'build' to run fast unit tests.
+  # --------------------------------------------------------------------------
+  unit-test:
+    needs: build
+    name: Unit Tests (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+
+      - uses: actions/checkout@v4 # Source code is still needed for error reporting
+      
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+
+      # Download the binary artifacts we just built
+      - name: Download Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: target-${{ matrix.os }}
+          path: target/
+
+      # Run Unit Tests
+      # Cargo will see the existing binaries in 'target/' and skip compilation.
+      - name: Run Unit Tests
+        run: cargo test --lib --workspace
+
+  # --------------------------------------------------------------------------
+  # JOB 3: INTEGRATION TESTS (Nextest Runner)
+  # Reuses artifacts to run isolated integration tests.
+  # --------------------------------------------------------------------------
+  integration-test:
+    needs: build
+    name: Int Tests (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          # submodules: true
+          fetch-depth: 0
+
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+
+      - name: install cargo nextest
+        uses: taiki-e/install-action@nextest
+      
+      - name: Download Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: target-${{ matrix.os }}
+          path: target/
+
+      # Run Integration Tests
+      # Nextest will find the test binaries in 'target/' automatically.
+      - name: Run Integration Tests
+        run: cargo nextest run --test '*' --retries 2
 
   test-ignored:
     name: Test SCM e2e tests on just Ubuntu
+    needs: build
     runs-on: ubuntu-latest
 
     steps:

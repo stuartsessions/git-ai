@@ -236,7 +236,6 @@ fn test_copilot_deduplicates_edited_filepaths() {
 }
 
 #[test]
-#[serial_test::serial] // Run serially to avoid env var conflicts with other tests
 fn test_copilot_returns_empty_transcript_in_codespaces() {
     // Save original values if present
     let original_codespaces = std::env::var("CODESPACES").ok();
@@ -271,7 +270,6 @@ fn test_copilot_returns_empty_transcript_in_codespaces() {
 }
 
 #[test]
-#[serial_test::serial] // Run serially to avoid env var conflicts with other tests
 fn test_copilot_returns_empty_transcript_in_remote_containers() {
     // Save original values if present
     let original_remote_containers = std::env::var("REMOTE_CONTAINERS").ok();

@@ -229,7 +229,6 @@ impl HookInstaller for CodexInstaller {
 mod tests {
     use super::*;
     use crate::mdm::hook_installer::{HookInstaller, HookInstallerParams};
-    use serial_test::serial;
     use std::path::Path;
     use tempfile::tempdir;
 
@@ -244,7 +243,7 @@ mod tests {
         let prev_home = std::env::var_os("HOME");
         let prev_userprofile = std::env::var_os("USERPROFILE");
 
-        // SAFETY: tests are serialized via #[serial], so mutating process env is safe.
+        // SAFETY: tests use isolated processes via nextest, so mutating process env is safe.
         unsafe {
             std::env::set_var("HOME", &home);
             std::env::set_var("USERPROFILE", &home);
@@ -252,7 +251,7 @@ mod tests {
 
         f(&home);
 
-        // SAFETY: tests are serialized via #[serial], so restoring process env is safe.
+        // SAFETY: tests use isolated processes via nextest, so restoring process env is safe.
         unsafe {
             match prev_home {
                 Some(v) => std::env::set_var("HOME", v),
@@ -338,7 +337,6 @@ notify = ["notify-send", "Codex"]
     }
 
     #[test]
-    #[serial]
     fn test_install_hooks_updates_config_and_check_reports_up_to_date() {
         with_temp_home(|home| {
             let codex_dir = home.join(".codex");
@@ -388,7 +386,6 @@ notify = ["notify-send", "Codex"]
     }
 
     #[test]
-    #[serial]
     fn test_install_hooks_dry_run() {
         with_temp_home(|home| {
             let codex_dir = home.join(".codex");
@@ -417,7 +414,6 @@ notify = ["notify-send", "Codex"]
     }
 
     #[test]
-    #[serial]
     fn test_install_hooks_idempotent() {
         with_temp_home(|home| {
             let codex_dir = home.join(".codex");
@@ -448,7 +444,6 @@ notify = ["notify-send", "Codex"]
     }
 
     #[test]
-    #[serial]
     fn test_uninstall_hooks_removes_git_ai_notify_entry() {
         with_temp_home(|home| {
             let codex_dir = home.join(".codex");

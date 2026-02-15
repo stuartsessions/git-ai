@@ -4,3 +4,5 @@
 .idea/
 .performance-repos/
 prompts.db
+
+.cargo/
