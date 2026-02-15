@@ -229,6 +229,7 @@ impl HookInstaller for CodexInstaller {
 mod tests {
     use super::*;
     use crate::mdm::hook_installer::{HookInstaller, HookInstallerParams};
+    use serial_test::serial;
     use std::path::Path;
     use tempfile::tempdir;
 
@@ -337,6 +338,7 @@ notify = ["notify-send", "Codex"]
     }
 
     #[test]
+    #[serial]
     fn test_install_hooks_updates_config_and_check_reports_up_to_date() {
         with_temp_home(|home| {
             let codex_dir = home.join(".codex");
@@ -386,6 +388,7 @@ notify = ["notify-send", "Codex"]
     }
 
     #[test]
+    #[serial]
     fn test_install_hooks_dry_run() {
         with_temp_home(|home| {
             let codex_dir = home.join(".codex");
@@ -414,6 +417,7 @@ notify = ["notify-send", "Codex"]
     }
 
     #[test]
+    #[serial]
     fn test_install_hooks_idempotent() {
         with_temp_home(|home| {
             let codex_dir = home.join(".codex");
@@ -444,6 +448,7 @@ notify = ["notify-send", "Codex"]
     }
 
     #[test]
+    #[serial]
     fn test_uninstall_hooks_removes_git_ai_notify_entry() {
         with_temp_home(|home| {
             let codex_dir = home.join(".codex");
