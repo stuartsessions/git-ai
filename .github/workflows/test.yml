@@ -47,6 +47,17 @@ jobs:
       - name: Build Tests
         run: cargo build
 
+      # UPLOAD ARTIFACTS
+      # We upload the 'target' directory to pass it to the test jobs.
+      - name: Upload Compiled Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: target-${{ matrix.os }}
+          path: |
+            target/
+            Cargo.lock
+          retention-days: 1
+          if-no-files-found: error
   # --------------------------------------------------------------------------
   # JOB 2: UNIT TESTS (Standard Runner)
   # Reuses the artifacts from 'build' to run fast unit tests.
