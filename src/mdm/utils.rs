@@ -27,6 +27,7 @@ thread_local! {
 
 /// Set or clear the thread-local home directory override for tests.
 /// Passing `Some(path)` sets the override; `None` clears it.
+#[allow(dead_code)]
 pub fn set_test_home_override(path: Option<PathBuf>) {
     TEST_HOME_OVERRIDE.with(|cell| {
         *cell.borrow_mut() = path;
@@ -35,6 +36,7 @@ pub fn set_test_home_override(path: Option<PathBuf>) {
 
 /// Set or clear a thread-local test environment override for `key`.
 /// Passing `Some(value)` sets the override; `None` clears it.
+#[allow(dead_code)]
 pub fn set_test_env_override(key: &str, value: Option<&str>) {
     TEST_ENV_OVERRIDES.with(|cell| {
         let mut m = cell.borrow_mut();
@@ -60,6 +62,7 @@ pub fn env_test_proxy(key: &str) -> Option<String> {
     if let Some(v) = get_test_env_override(key) {
         return Some(v);
     }
+
     std::env::var(key).ok()
 }
 
@@ -382,9 +385,10 @@ fn get_editor_cli_candidates(cli_name: &str) -> Vec<(PathBuf, PathBuf)> {
 /// In Codespaces, VS Code extensions must be configured via devcontainer.json
 /// rather than installed via CLI
 pub fn is_github_codespaces() -> bool {
-    std::env::var("CODESPACES")
-        .map(|v| v == "true")
-        .unwrap_or(false)
+    if let Some(env_value) = env_test_proxy("CODESPACES") {
+        return env_value == "true";
+    }
+    false
 }
 
 /// Get the user's home directory
@@ -853,36 +857,30 @@ mod tests {
 
     #[test]
     fn test_is_github_codespaces() {
-        // Save original value
-        let original = std::env::var("CODESPACES").ok();
+        // Since env_test_proxy falls back to the environment variable if
+        // No local override is set, make sure test isn't scewed by existing env
+        // variable in the test envrionment.
+        assert_eq!(std::env::var("CODESPACES").ok(), None);
+        
+        // Test when CODESPACES is not set
+        set_test_env_override("CODESPACES", None);
+        // Logic note: env_test_proxy checks environment after thread, so if
+        // in the parent environement something is changed, but the local thread
+        // doesn't have it set as true, this will fail.
+        assert!(!is_github_codespaces());
+        // Test when CODESPACES is set to "true"
+        set_test_env_override("CODESPACES", Some("true"));
+        assert!(is_github_codespaces());
 
-        // SAFETY: This test modifies environment variables which is inherently
-        // unsafe in multi-threaded contexts. This test should run in isolation.
-        unsafe {
-            // Test when CODESPACES is not set
-            std::env::remove_var("CODESPACES");
-            assert!(!is_github_codespaces());
+        // Test when CODESPACES is set to other values
+        set_test_env_override("CODESPACES", Some("false"));
+        assert!(!is_github_codespaces());
 
-            // Test when CODESPACES is set to "true"
-            std::env::set_var("CODESPACES", "true");
-            assert!(is_github_codespaces());
+        set_test_env_override("CODESPACES", Some("1"));
+        assert!(!is_github_codespaces());
 
-            // Test when CODESPACES is set to other values
-            std::env::set_var("CODESPACES", "false");
-            assert!(!is_github_codespaces());
-
-            std::env::set_var("CODESPACES", "1");
-            assert!(!is_github_codespaces());
-
-            std::env::set_var("CODESPACES", "");
-            assert!(!is_github_codespaces());
-
-            // Restore original value
-            match original {
-                Some(val) => std::env::set_var("CODESPACES", val),
-                None => std::env::remove_var("CODESPACES"),
-            }
-        }
+        set_test_env_override("CODESPACES", Some(""));
+        assert!(!is_github_codespaces());
     }
 
     #[test]
