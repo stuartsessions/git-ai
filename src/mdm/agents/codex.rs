@@ -229,7 +229,6 @@ impl HookInstaller for CodexInstaller {
 mod tests {
     use super::*;
     use crate::mdm::hook_installer::{HookInstaller, HookInstallerParams};
-    use serial_test::serial;
     use std::path::Path;
     use tempfile::tempdir;
 
@@ -241,28 +240,14 @@ mod tests {
         let temp = tempdir().unwrap();
         let home = temp.path().to_path_buf();
 
-        let prev_home = std::env::var_os("HOME");
-        let prev_userprofile = std::env::var_os("USERPROFILE");
-
-        // SAFETY: tests use isolated processes via nextest, so mutating process env is safe.
-        unsafe {
-            std::env::set_var("HOME", &home);
-            std::env::set_var("USERPROFILE", &home);
-        }
+        // Set a thread-local override for home directory so we don't mutate
+        // process-global env vars (avoids serializing tests).
+        crate::mdm::utils::set_test_home_override(Some(home.clone()));
 
         f(&home);
 
-        // SAFETY: tests use isolated processes via nextest, so restoring process env is safe.
-        unsafe {
-            match prev_home {
-                Some(v) => std::env::set_var("HOME", v),
-                None => std::env::remove_var("HOME"),
-            }
-            match prev_userprofile {
-                Some(v) => std::env::set_var("USERPROFILE", v),
-                None => std::env::remove_var("USERPROFILE"),
-            }
-        }
+        // Clear the override
+        crate::mdm::utils::set_test_home_override(None);
     }
 
     #[test]
@@ -338,7 +323,6 @@ notify = ["notify-send", "Codex"]
     }
 
     #[test]
-    #[serial]
     fn test_install_hooks_updates_config_and_check_reports_up_to_date() {
         with_temp_home(|home| {
             let codex_dir = home.join(".codex");
@@ -388,7 +372,6 @@ notify = ["notify-send", "Codex"]
     }
 
     #[test]
-    #[serial]
     fn test_install_hooks_dry_run() {
         with_temp_home(|home| {
             let codex_dir = home.join(".codex");
@@ -417,7 +400,6 @@ notify = ["notify-send", "Codex"]
     }
 
     #[test]
-    #[serial]
     fn test_install_hooks_idempotent() {
         with_temp_home(|home| {
             let codex_dir = home.join(".codex");
@@ -448,7 +430,6 @@ notify = ["notify-send", "Codex"]
     }
 
     #[test]
-    #[serial]
     fn test_uninstall_hooks_removes_git_ai_notify_entry() {
         with_temp_home(|home| {
             let codex_dir = home.join(".codex");

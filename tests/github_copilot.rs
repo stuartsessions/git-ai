@@ -2,16 +2,17 @@ mod test_utils;
 
 use git_ai::authorship::transcript::Message;
 use git_ai::commands::checkpoint_agent::agent_presets::GithubCopilotPreset;
+use git_ai::mdm::utils::set_test_env_override;
 use serde_json::json;
 use std::{fs, io::Write};
 use test_utils::{fixture_path, load_fixture};
 
 /// Ensure CODESPACES and REMOTE_CONTAINERS are not set (they cause early return in transcript parsing)
+// This may have to remove env vars in addition to thread-local overrides
 fn ensure_clean_env() {
-    unsafe {
-        std::env::remove_var("CODESPACES");
-        std::env::remove_var("REMOTE_CONTAINERS");
-    }
+    // check exists, removes. If doesn't exist, no problem. Thread-local check.
+    set_test_env_override("CODESPACES", None);
+    set_test_env_override("REMOTE_CONTAINERS", None);
 }
 
 #[test]
@@ -240,10 +241,8 @@ fn test_copilot_returns_empty_transcript_in_codespaces() {
     // Save original values if present
     let original_codespaces = std::env::var("CODESPACES").ok();
 
-    // Set CODESPACES to true
-    unsafe {
-        std::env::set_var("CODESPACES", "true");
-    }
+    // Set CODESPACES to true for this test only (thread-local override)
+    set_test_env_override("CODESPACES", Some("true"));
 
     // Load the test fixture path
     let fixture = fixture_path("copilot_session_simple.json");
@@ -259,13 +258,11 @@ fn test_copilot_returns_empty_transcript_in_codespaces() {
     assert!(edited_filepaths.is_some());
     assert_eq!(edited_filepaths.unwrap().len(), 0);
 
-    // Restore original value or remove if it wasn't set
-    unsafe {
-        if let Some(original) = original_codespaces {
-            std::env::set_var("CODESPACES", original);
-        } else {
-            std::env::remove_var("CODESPACES");
-        }
+    // Restore previous override state
+    if let Some(original) = original_codespaces {
+        set_test_env_override("CODESPACES", Some(&original));
+    } else {
+        set_test_env_override("CODESPACES", None);
     }
 }
 
@@ -274,10 +271,8 @@ fn test_copilot_returns_empty_transcript_in_remote_containers() {
     // Save original values if present
     let original_remote_containers = std::env::var("REMOTE_CONTAINERS").ok();
 
-    // Set REMOTE_CONTAINERS to true
-    unsafe {
-        std::env::set_var("REMOTE_CONTAINERS", "true");
-    }
+    // Set REMOTE_CONTAINERS to true for this test only (thread-local override)
+    set_test_env_override("REMOTE_CONTAINERS", Some("true"));
 
     // Load the test fixture path
     let fixture = fixture_path("copilot_session_simple.json");
@@ -293,13 +288,11 @@ fn test_copilot_returns_empty_transcript_in_remote_containers() {
     assert!(edited_filepaths.is_some());
     assert_eq!(edited_filepaths.unwrap().len(), 0);
 
-    // Restore original value or remove if it wasn't set
-    unsafe {
-        if let Some(original) = original_remote_containers {
-            std::env::set_var("REMOTE_CONTAINERS", original);
-        } else {
-            std::env::remove_var("REMOTE_CONTAINERS");
-        }
+    // Restore previous override state
+    if let Some(original) = original_remote_containers {
+        set_test_env_override("REMOTE_CONTAINERS", Some(&original));
+    } else {
+        set_test_env_override("REMOTE_CONTAINERS", None);
     }
 }
 

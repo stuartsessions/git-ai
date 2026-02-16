@@ -4,6 +4,7 @@ mod test_utils;
 
 use git_ai::authorship::transcript::Message;
 use git_ai::authorship::working_log::CheckpointKind;
+use git_ai::mdm::utils::set_test_env_override;
 use git_ai::commands::checkpoint_agent::agent_presets::{
     AgentCheckpointFlags, AgentCheckpointPreset,
 };
@@ -223,13 +224,11 @@ fn test_opencode_preset_pretooluse_returns_human_checkpoint() {
     })
     .to_string();
 
-    // Set the test storage path via env var
-    unsafe {
-        std::env::set_var(
-            "GIT_AI_OPENCODE_STORAGE_PATH",
-            storage_path.to_str().unwrap(),
-        );
-    }
+    // Set the test storage path via thread-local override (avoids global env mutation)
+    set_test_env_override(
+        "GIT_AI_OPENCODE_STORAGE_PATH",
+        Some(storage_path.to_str().unwrap()),
+    );
 
     let flags = AgentCheckpointFlags {
         hook_input: Some(hook_input),
@@ -239,10 +238,8 @@ fn test_opencode_preset_pretooluse_returns_human_checkpoint() {
         .run(flags)
         .expect("Failed to run OpenCodePreset");
 
-    // Clean up env var
-    unsafe {
-        std::env::remove_var("GIT_AI_OPENCODE_STORAGE_PATH");
-    }
+    // Clear override
+    set_test_env_override("GIT_AI_OPENCODE_STORAGE_PATH", None);
 
     assert_eq!(
         result.checkpoint_kind,
@@ -278,13 +275,10 @@ fn test_opencode_preset_posttooluse_returns_ai_checkpoint() {
     })
     .to_string();
 
-    // Set the test storage path via env var
-    unsafe {
-        std::env::set_var(
-            "GIT_AI_OPENCODE_STORAGE_PATH",
-            storage_path.to_str().unwrap(),
-        );
-    }
+    set_test_env_override(
+        "GIT_AI_OPENCODE_STORAGE_PATH",
+        Some(storage_path.to_str().unwrap()),
+    );
 
     let flags = AgentCheckpointFlags {
         hook_input: Some(hook_input),
@@ -294,10 +288,7 @@ fn test_opencode_preset_posttooluse_returns_ai_checkpoint() {
         .run(flags)
         .expect("Failed to run OpenCodePreset");
 
-    // Clean up env var
-    unsafe {
-        std::env::remove_var("GIT_AI_OPENCODE_STORAGE_PATH");
-    }
+    set_test_env_override("GIT_AI_OPENCODE_STORAGE_PATH", None);
 
     assert_eq!(
         result.checkpoint_kind,
@@ -340,12 +331,10 @@ fn test_opencode_preset_stores_session_id_in_metadata() {
     })
     .to_string();
 
-    unsafe {
-        std::env::set_var(
-            "GIT_AI_OPENCODE_STORAGE_PATH",
-            storage_path.to_str().unwrap(),
-        );
-    }
+    set_test_env_override(
+        "GIT_AI_OPENCODE_STORAGE_PATH",
+        Some(storage_path.to_str().unwrap()),
+    );
 
     let flags = AgentCheckpointFlags {
         hook_input: Some(hook_input),
@@ -355,9 +344,7 @@ fn test_opencode_preset_stores_session_id_in_metadata() {
         .run(flags)
         .expect("Failed to run OpenCodePreset");
 
-    unsafe {
-        std::env::remove_var("GIT_AI_OPENCODE_STORAGE_PATH");
-    }
+    set_test_env_override("GIT_AI_OPENCODE_STORAGE_PATH", None);
 
     assert!(result.agent_metadata.is_some());
     let metadata = result.agent_metadata.unwrap();
@@ -382,12 +369,10 @@ fn test_opencode_preset_sets_repo_working_dir() {
     })
     .to_string();
 
-    unsafe {
-        std::env::set_var(
-            "GIT_AI_OPENCODE_STORAGE_PATH",
-            storage_path.to_str().unwrap(),
-        );
-    }
+    set_test_env_override(
+        "GIT_AI_OPENCODE_STORAGE_PATH",
+        Some(storage_path.to_str().unwrap()),
+    );
 
     let flags = AgentCheckpointFlags {
         hook_input: Some(hook_input),
@@ -397,9 +382,7 @@ fn test_opencode_preset_sets_repo_working_dir() {
         .run(flags)
         .expect("Failed to run OpenCodePreset");
 
-    unsafe {
-        std::env::remove_var("GIT_AI_OPENCODE_STORAGE_PATH");
-    }
+    set_test_env_override("GIT_AI_OPENCODE_STORAGE_PATH", None);
 
     assert!(result.repo_working_dir.is_some());
     assert_eq!(result.repo_working_dir.unwrap(), "/Users/test/my-project");

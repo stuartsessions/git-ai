@@ -6,6 +6,7 @@ use crate::{
     commands::checkpoint_agent::agent_presets::{
         AgentCheckpointFlags, AgentCheckpointPreset, AgentRunResult,
     },
+    mdm::utils,
     error::GitAiError,
     observability::log_error,
 };
@@ -173,11 +174,13 @@ impl AgentCheckpointPreset for OpenCodePreset {
             .map(|path| vec![path]);
 
         // Determine OpenCode path (test override can point to either root or legacy storage path)
-        let opencode_path = if let Ok(test_path) = std::env::var("GIT_AI_OPENCODE_STORAGE_PATH") {
-            PathBuf::from(test_path)
-        } else {
-            Self::opencode_data_path()?
-        };
+            let opencode_path: std::path::PathBuf = if let Some(test_path) =
+                utils::env_test_proxy("GIT_AI_OPENCODE_STORAGE_PATH")
+            {
+                std::path::PathBuf::from(test_path)
+            } else {
+                Self::opencode_data_path()?
+            };
 
         // Fetch transcript and model from sqlite first, then fallback to legacy storage
         let (transcript, model) =
@@ -206,7 +209,7 @@ impl AgentCheckpointPreset for OpenCodePreset {
         let mut agent_metadata = HashMap::new();
         agent_metadata.insert("session_id".to_string(), session_id);
         // Store test path if set, for subprocess access in tests
-        if let Ok(test_path) = std::env::var("GIT_AI_OPENCODE_STORAGE_PATH") {
+        if let Some(test_path) = crate::mdm::utils::env_test_proxy("GIT_AI_OPENCODE_STORAGE_PATH") {
             agent_metadata.insert("__test_storage_path".to_string(), test_path);
         }
 

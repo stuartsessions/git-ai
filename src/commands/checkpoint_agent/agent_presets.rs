@@ -2,9 +2,10 @@ use crate::{
     authorship::{
         transcript::{AiTranscript, Message},
         working_log::{AgentId, CheckpointKind},
-    },
-    error::GitAiError,
-    observability::log_error,
+    }, 
+    error::GitAiError, 
+    mdm::utils,
+     observability::log_error
 };
 use chrono::{TimeZone, Utc};
 use dirs;
@@ -2668,10 +2669,16 @@ impl GithubCopilotPreset {
     pub fn transcript_and_model_from_copilot_session_json(
         session_json_path: &str,
     ) -> Result<(AiTranscript, Option<String>, Option<Vec<String>>), GitAiError> {
+        
         // Check if running in Codespaces or Remote Containers - if so, return empty transcript
-        let is_codespaces = env::var("CODESPACES").ok().as_deref() == Some("true");
-        let is_remote_containers = env::var("REMOTE_CONTAINERS").ok().as_deref() == Some("true");
-
+        let is_codespaces = utils::env_test_proxy("CODESPACES")
+            .as_deref()
+            == Some("true");
+        let is_remote_containers = utils::env_test_proxy("REMOTE_CONTAINERS")
+            .as_deref()
+            == Some("true");
+        
+        
         if is_codespaces || is_remote_containers {
             return Ok((AiTranscript::new(), None, Some(Vec::new())));
         }
