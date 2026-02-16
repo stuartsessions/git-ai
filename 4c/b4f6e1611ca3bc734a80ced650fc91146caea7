@@ -1,0 +1,51 @@
+src/git/test_utils/tmp_repo.rs
+  ebfa0d1c09fd60d7 1-1356
+src/git/test_utils/mod.rs
+  ebfa0d1c09fd60d7 4-5
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.3",
+  "base_commit_sha": "4cb4f6e1611ca3bc734a80ced650fc91146caea7",
+  "prompts": {
+    "1cb75f9bdf568af3": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "b77f0b29-9dfa-48be-b2c9-081defc62f89",
+        "model": "unknown"
+      },
+      "human_author": "s_sessions@coloradocollege.edu",
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 1,
+      "accepted_lines": 1,
+      "overriden_lines": 0
+    },
+    "b057d48ca5bfc901": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "618584b1-f5d5-4824-966e-3303fed4e1a8",
+        "model": "copilot/gpt-5-mini"
+      },
+      "human_author": "s_sessions@coloradocollege.edu",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 41,
+      "overriden_lines": 0
+    },
+    "ebfa0d1c09fd60d7": {
+      "agent_id": {
+        "tool": "github-copilot",
+        "id": "6cdd3290-4b86-46c2-8dff-27d5890c0c20",
+        "model": "copilot/auto"
+      },
+      "human_author": "s_sessions@coloradocollege.edu",
+      "messages": [],
+      "total_additions": 1361,
+      "total_deletions": 1281,
+      "accepted_lines": 1360,
+      "overriden_lines": 0
+    }
+  }
+}
