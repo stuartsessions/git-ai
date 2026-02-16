@@ -7,6 +7,61 @@ use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::cell::RefCell;
+use std::collections::HashMap;
+
+thread_local! {
+    /// Thread-local override for the user's home directory used by tests.
+    /// Tests should call `set_test_home_override(Some(path))` to make
+    /// `home_dir()` return `path` for the current thread without mutating
+    /// process-global environment variables.
+    static TEST_HOME_OVERRIDE: RefCell<Option<PathBuf>> = RefCell::new(None);
+}
+
+thread_local! {
+    /// Thread-local test-only environment overrides. Tests can set a key here
+    /// to simulate environment variables without mutating the process-wide
+    /// environment (avoids serializing tests).
+    static TEST_ENV_OVERRIDES: RefCell<HashMap<String, String>> = RefCell::new(HashMap::new());
+}
+
+/// Set or clear the thread-local home directory override for tests.
+/// Passing `Some(path)` sets the override; `None` clears it.
+pub fn set_test_home_override(path: Option<PathBuf>) {
+    TEST_HOME_OVERRIDE.with(|cell| {
+        *cell.borrow_mut() = path;
+    });
+}
+
+/// Set or clear a thread-local test environment override for `key`.
+/// Passing `Some(value)` sets the override; `None` clears it.
+pub fn set_test_env_override(key: &str, value: Option<&str>) {
+    TEST_ENV_OVERRIDES.with(|cell| {
+        let mut m = cell.borrow_mut();
+        if let Some(v) = value {
+            m.insert(key.to_string(), v.to_string());
+        } else {
+            m.remove(key);
+        }
+    })
+}
+
+/// Get a thread-local test env override for `key` if present.
+pub fn get_test_env_override(key: &str) -> Option<String> {
+    TEST_ENV_OVERRIDES.with(|cell| cell.borrow().get(key).cloned())
+}
+
+/// Return the test override for `key` if present, otherwise fall back to the
+/// real process environment variable. This is intended for use in code paths
+/// where tests previously mutated `std::env` directly.
+/// 
+/// All env calls can go through this, as real-uses will not have a test override.
+pub fn env_test_proxy(key: &str) -> Option<String> {
+    if let Some(v) = get_test_env_override(key) {
+        return Some(v);
+    }
+    std::env::var(key).ok()
+}
 
 // Minimum version requirements
 pub const MIN_CURSOR_VERSION: (u32, u32) = (1, 7);
@@ -334,6 +389,11 @@ pub fn is_github_codespaces() -> bool {
 
 /// Get the user's home directory
 pub fn home_dir() -> PathBuf {
+    // If tests set a thread-local override, honor it to avoid mutating
+    // process-global environment variables (which cause races in parallel tests).
+    if let Some(over) = TEST_HOME_OVERRIDE.with(|c| c.borrow().clone()) {
+        return over;
+    }
     #[cfg(windows)]
     {
         if let Ok(userprofile) = std::env::var("USERPROFILE")
