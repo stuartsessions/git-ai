@@ -90,7 +90,7 @@ jobs:
       # Run Unit Tests
       # Cargo will see the existing binaries in 'target/' and skip compilation.
       - name: Run Unit Tests
-        run: cargo test --lib --test-threads=8
+        run: cargo test --lib
   # --------------------------------------------------------------------------
   # JOB 3: INTEGRATION TESTS (Nextest Runner)
   # Reuses artifacts to run isolated integration tests.
@@ -163,6 +163,6 @@ jobs:
             ${{ runner.os }}-cargo-
 
       - name: Run ignored tests
-        run: cargo nextest run --test '*' --run-ignored=only --retries 2
+        run: cargo test --test github_integration -- --ignored
         env:
           CARGO_INCREMENTAL: 0
