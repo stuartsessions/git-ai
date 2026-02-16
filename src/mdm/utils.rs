@@ -27,6 +27,7 @@ thread_local! {
 
 /// Set or clear the thread-local home directory override for tests.
 /// Passing `Some(path)` sets the override; `None` clears it.
+#[allow(dead_code)]
 pub fn set_test_home_override(path: Option<PathBuf>) {
     TEST_HOME_OVERRIDE.with(|cell| {
         *cell.borrow_mut() = path;
@@ -35,6 +36,7 @@ pub fn set_test_home_override(path: Option<PathBuf>) {
 
 /// Set or clear a thread-local test environment override for `key`.
 /// Passing `Some(value)` sets the override; `None` clears it.
+#[allow(dead_code)]
 pub fn set_test_env_override(key: &str, value: Option<&str>) {
     TEST_ENV_OVERRIDES.with(|cell| {
         let mut m = cell.borrow_mut();
