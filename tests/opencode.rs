@@ -4,11 +4,11 @@ mod test_utils;
 
 use git_ai::authorship::transcript::Message;
 use git_ai::authorship::working_log::CheckpointKind;
-use git_ai::mdm::utils::set_test_env_override;
 use git_ai::commands::checkpoint_agent::agent_presets::{
     AgentCheckpointFlags, AgentCheckpointPreset,
 };
 use git_ai::commands::checkpoint_agent::opencode_preset::OpenCodePreset;
+use git_ai::mdm::utils::set_test_env_override;
 use serde_json::json;
 use std::fs;
 use test_utils::fixture_path;

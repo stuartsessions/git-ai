@@ -6,8 +6,8 @@ use crate::{
     commands::checkpoint_agent::agent_presets::{
         AgentCheckpointFlags, AgentCheckpointPreset, AgentRunResult,
     },
-    mdm::utils,
     error::GitAiError,
+    mdm::utils,
     observability::log_error,
 };
 use chrono::DateTime;
@@ -174,9 +174,8 @@ impl AgentCheckpointPreset for OpenCodePreset {
             .map(|path| vec![path]);
 
         // Determine OpenCode path (test override can point to either root or legacy storage path)
-            let opencode_path: std::path::PathBuf = if let Some(test_path) =
-                utils::env_test_proxy("GIT_AI_OPENCODE_STORAGE_PATH")
-            {
+        let opencode_path: std::path::PathBuf =
+            if let Some(test_path) = utils::env_test_proxy("GIT_AI_OPENCODE_STORAGE_PATH") {
                 std::path::PathBuf::from(test_path)
             } else {
                 Self::opencode_data_path()?

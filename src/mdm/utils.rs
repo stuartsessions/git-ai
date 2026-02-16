@@ -3,12 +3,12 @@ use crate::error::GitAiError;
 use crate::utils::debug_log;
 use jsonc_parser::ParseOptions;
 use jsonc_parser::cst::CstRootNode;
+use std::cell::RefCell;
+use std::collections::HashMap;
 use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use std::cell::RefCell;
-use std::collections::HashMap;
 
 thread_local! {
     /// Thread-local override for the user's home directory used by tests.
@@ -54,7 +54,7 @@ pub fn get_test_env_override(key: &str) -> Option<String> {
 /// Return the test override for `key` if present, otherwise fall back to the
 /// real process environment variable. This is intended for use in code paths
 /// where tests previously mutated `std::env` directly.
-/// 
+///
 /// All env calls can go through this, as real-uses will not have a test override.
 pub fn env_test_proxy(key: &str) -> Option<String> {
     if let Some(v) = get_test_env_override(key) {
