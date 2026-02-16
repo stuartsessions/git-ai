@@ -484,12 +484,10 @@ fn test_opencode_e2e_checkpoint_and_commit() {
     copy_dir_all(&fixture_storage, storage_path).unwrap();
 
     // Set up environment for the test
-    unsafe {
-        std::env::set_var(
-            "GIT_AI_OPENCODE_STORAGE_PATH",
-            storage_path.to_str().unwrap(),
-        );
-    }
+    set_test_env_override(
+        "GIT_AI_OPENCODE_STORAGE_PATH",
+        Some(storage_path.to_str().unwrap()),
+    );
 
     // Create hook input for PreToolUse (human checkpoint)
     let pre_hook_input = json!({
@@ -525,9 +523,7 @@ fn test_opencode_e2e_checkpoint_and_commit() {
         .unwrap();
 
     // Clean up env var
-    unsafe {
-        std::env::remove_var("GIT_AI_OPENCODE_STORAGE_PATH");
-    }
+    set_test_env_override("GIT_AI_OPENCODE_STORAGE_PATH", None);
 
     // Commit
     let commit = repo.stage_all_and_commit("Add AI line").unwrap();

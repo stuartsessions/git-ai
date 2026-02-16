@@ -7,7 +7,8 @@ use crate::commands::{blame, checkpoint::run as checkpoint};
 use crate::error::GitAiError;
 use crate::git::repository::Repository as GitAiRepository;
 use git2::{Repository, Signature};
-use std::collections::BTreeMap;
+use std::cell::RefCell;
+use std::collections::{BTreeMap, HashMap};
 use std::fs;
 use std::path::PathBuf;
 use std::process::Command;
@@ -264,23 +265,24 @@ pub struct TmpRepo {
     path: PathBuf,
     repo_git2: Repository,
     repo_gitai: GitAiRepository,
+    env_vars: RefCell<HashMap<String, String>>,
 }
 
 #[allow(dead_code)]
 impl TmpRepo {
     /// Creates a new temporary repository with a randomly generated directory
     pub fn new() -> Result<Self, GitAiError> {
+        let mut env_vars = HashMap::new();
         // Set test database path if not already set (for in-process unit tests)
-        // OnceLock means DB is initialized once per process, so all unit tests
-        // in this process will share this test DB - but won't touch production DB
-        if std::env::var("GIT_AI_TEST_DB_PATH").is_err() {
+        // Store in local env_vars instead of global environment to avoid process-wide side effects
+
+        // Check if it's already in the process environment
+        if let Ok(db_path) = std::env::var("GIT_AI_TEST_DB_PATH") {
+            env_vars.insert("GIT_AI_TEST_DB_PATH".to_string(), db_path);
+        } else {
+            // Create a default path and store in local env_vars
             let test_db_path = std::env::temp_dir().join("git-ai-unit-test-db");
-            // SAFETY: This is only called in test code, and we're setting a test-specific
-            // env var before any threads access the database. The OnceLock pattern ensures
-            // the database path is read only once, so this is safe.
-            unsafe {
-                std::env::set_var("GIT_AI_TEST_DB_PATH", &test_db_path);
-            }
+            env_vars.insert("GIT_AI_TEST_DB_PATH".to_string(), test_db_path.to_string_lossy().to_string());
         }
 
         // Generate a robust, unique temporary directory path
@@ -305,6 +307,7 @@ impl TmpRepo {
             path: tmp_dir,
             repo_git2,
             repo_gitai,
+            env_vars: RefCell::new(env_vars),
         })
     }
 
@@ -315,6 +318,37 @@ impl TmpRepo {
         repo.trigger_checkpoint_with_author("test_user")?;
         repo.commit_with_message("initial commit")?;
         Ok((repo, lines_file, alphabet_file))
+    }
+
+    /// Set an environment variable for this repository
+    pub fn set_env(&self, key: &str, value: &str) {
+        self.env_vars.borrow_mut().insert(key.to_string(), value.to_string());
+    }
+
+    /// Get an environment variable for this repository
+    pub fn get_env(&self, key: &str) -> Option<String> {
+        self.env_vars.borrow().get(key).cloned()
+    }
+
+    /// Remove an environment variable for this repository
+    pub fn unset_env(&self, key: &str) {
+        self.env_vars.borrow_mut().remove(key);
+    }
+
+    /// Clear all environment variables for this repository
+    pub fn clear_env(&self) {
+        self.env_vars.borrow_mut().clear();
+    }
+
+    /// Create a Command with the repository's environment variables set
+    /// This is a helper for running git commands with repo-specific env vars
+    fn create_git_command(&self) -> Command {
+        let mut cmd = Command::new(crate::config::Config::get().git_cmd());
+        cmd.current_dir(&self.path);
+        for (key, value) in self.env_vars.borrow().iter() {
+            cmd.env(key, value);
+        }
+        cmd
     }
 
     /// Writes a file with the given filename and contents, returns a TmpFile for further updates
@@ -347,6 +381,7 @@ impl TmpRepo {
                 repo_gitai: crate::git::repository::find_repository_in_path(
                     self.path.to_str().unwrap(),
                 )?,
+                env_vars: RefCell::new(self.env_vars.borrow().clone()),
             },
             filename: filename.to_string(),
             contents: contents.to_string(),
@@ -555,8 +590,7 @@ impl TmpRepo {
 
     /// Merges a branch into the current branch using real git CLI, always picking 'theirs' in conflicts
     pub fn merge_branch(&self, branch_name: &str, message: &str) -> Result<(), GitAiError> {
-        let output = Command::new(crate::config::Config::get().git_cmd())
-            .current_dir(&self.path)
+        let output = self.create_git_command()
             .args(["merge", branch_name, "-m", message, "-X", "theirs"])
             .output()
             .map_err(|e| GitAiError::Generic(format!("Failed to run git merge: {}", e)))?;
@@ -591,8 +625,7 @@ impl TmpRepo {
         // First, get the current commit SHA before rebase
         // let old_sha = self.head_commit_sha()?;
 
-        let mut rebase = Command::new(crate::config::Config::get().git_cmd())
-            .current_dir(&self.path)
+        let mut rebase = self.create_git_command()
             .args(["rebase", onto_branch])
             .output()
             .map_err(|e| GitAiError::Generic(format!("Failed to run git rebase: {}", e)))?;
@@ -604,20 +637,17 @@ impl TmpRepo {
             // Find conflicted files (for our tests, just lines.md)
             let conflicted_file = self.path.join("lines.md");
             // Overwrite with theirs (the branch we're rebasing onto)
-            let theirs_content = Command::new(crate::config::Config::get().git_cmd())
-                .current_dir(&self.path)
+            let theirs_content = self.create_git_command()
                 .args(["show", &format!("{}:lines.md", onto_branch)])
                 .output()
                 .map_err(|e| GitAiError::Generic(format!("Failed to get theirs: {}", e)))?;
             fs::write(&conflicted_file, &theirs_content.stdout)?;
             // Add and continue
-            Command::new(crate::config::Config::get().git_cmd())
-                .current_dir(&self.path)
+            self.create_git_command()
                 .args(["add", "lines.md"])
                 .output()
                 .map_err(|e| GitAiError::Generic(format!("Failed to git add: {}", e)))?;
-            rebase = Command::new(crate::config::Config::get().git_cmd())
-                .current_dir(&self.path)
+            rebase = self.create_git_command()
                 .args(["rebase", "--continue"])
                 .output()
                 .map_err(|e| {
@@ -672,8 +702,7 @@ impl TmpRepo {
         let mut args = vec!["cherry-pick"];
         args.extend(commits);
 
-        let output = Command::new(crate::config::Config::get().git_cmd())
-            .current_dir(&self.path)
+        let output = self.create_git_command()
             .args(&args)
             .output()
             .map_err(|e| GitAiError::Generic(format!("Failed to run git cherry-pick: {}", e)))?;
@@ -690,8 +719,7 @@ impl TmpRepo {
 
     /// Cherry-pick with expected conflicts (returns true if there were conflicts)
     pub fn cherry_pick_with_conflicts(&self, commit: &str) -> Result<bool, GitAiError> {
-        let output = Command::new(crate::config::Config::get().git_cmd())
-            .current_dir(&self.path)
+        let output = self.create_git_command()
             .args(["cherry-pick", commit])
             .output()
             .map_err(|e| GitAiError::Generic(format!("Failed to run git cherry-pick: {}", e)))?;
@@ -711,8 +739,7 @@ impl TmpRepo {
 
     /// Continue a cherry-pick after resolving conflicts
     pub fn cherry_pick_continue(&self) -> Result<(), GitAiError> {
-        let output = Command::new(crate::config::Config::get().git_cmd())
-            .current_dir(&self.path)
+        let output = self.create_git_command()
             .args(["cherry-pick", "--continue"])
             .env("GIT_EDITOR", "true") // Skip opening editor
             .output()
@@ -732,8 +759,7 @@ impl TmpRepo {
 
     /// Abort a cherry-pick operation
     pub fn cherry_pick_abort(&self) -> Result<(), GitAiError> {
-        let output = Command::new(crate::config::Config::get().git_cmd())
-            .current_dir(&self.path)
+        let output = self.create_git_command()
             .args(["cherry-pick", "--abort"])
             .output()
             .map_err(|e| {
@@ -1061,8 +1087,7 @@ impl TmpRepo {
         let _current_commit = self.repo_git2.find_commit(head.target().unwrap())?;
 
         // Use git CLI to amend the commit (this is simpler and more reliable)
-        let output = Command::new(crate::config::Config::get().git_cmd())
-            .current_dir(&self.path)
+        let output = self.create_git_command()
             .args([
                 "commit",
                 "--amend",
@@ -1095,8 +1120,7 @@ impl TmpRepo {
 
     /// Performs a squash merge of a branch into the current branch (stages changes without committing)
     pub fn merge_squash(&self, branch_name: &str) -> Result<(), GitAiError> {
-        let output = Command::new(crate::config::Config::get().git_cmd())
-            .current_dir(&self.path)
+        let output = self.create_git_command()
             .args(["merge", "--squash", branch_name])
             .output()
             .map_err(|e| GitAiError::Generic(format!("Failed to run git merge --squash: {}", e)))?;
@@ -1114,8 +1138,7 @@ impl TmpRepo {
     /// Merges a branch into the current branch, allowing conflicts to remain unresolved
     /// Returns Ok(true) if there are conflicts, Ok(false) if merge succeeded without conflicts
     pub fn merge_with_conflicts(&self, branch_name: &str) -> Result<bool, GitAiError> {
-        let output = Command::new(crate::config::Config::get().git_cmd())
-            .current_dir(&self.path)
+        let output = self.create_git_command()
             .args(["merge", branch_name, "--no-commit"])
             .output()
             .map_err(|e| GitAiError::Generic(format!("Failed to run git merge: {}", e)))?;
@@ -1149,8 +1172,7 @@ impl TmpRepo {
     pub fn resolve_conflict(&self, filename: &str, choose: &str) -> Result<(), GitAiError> {
         match choose {
             "ours" => {
-                let output = Command::new(crate::config::Config::get().git_cmd())
-                    .current_dir(&self.path)
+                let output = self.create_git_command()
                     .args(["checkout", "--ours", filename])
                     .output()
                     .map_err(|e| {
@@ -1165,8 +1187,7 @@ impl TmpRepo {
                 }
             }
             "theirs" => {
-                let output = Command::new(crate::config::Config::get().git_cmd())
-                    .current_dir(&self.path)
+                let output = self.create_git_command()
                     .args(["checkout", "--theirs", filename])
                     .output()
                     .map_err(|e| {
@@ -1195,8 +1216,7 @@ impl TmpRepo {
 
     /// Execute a git command directly (no hooks)
     pub fn git_command(&self, args: &[&str]) -> Result<(), GitAiError> {
-        let output = Command::new(crate::config::Config::get().git_cmd())
-            .current_dir(&self.path)
+        let output = self.create_git_command()
             .args(args)
             .output()
             .map_err(|e| GitAiError::Generic(format!("Failed to run git command: {}", e)))?;
@@ -1241,8 +1261,7 @@ impl TmpRepo {
         }
 
         // Run the actual git command
-        let output = Command::new(crate::config::Config::get().git_cmd())
-            .current_dir(&self.path)
+        let output = self.create_git_command()
             .args(&args)
             .output()
             .map_err(|e| GitAiError::Generic(format!("Failed to run git reset: {}", e)))?;
