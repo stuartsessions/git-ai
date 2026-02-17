@@ -15,13 +15,14 @@ thread_local! {
     /// Tests should call `set_test_home_override(Some(path))` to make
     /// `home_dir()` return `path` for the current thread without mutating
     /// process-global environment variables.
-    static TEST_HOME_OVERRIDE: RefCell<Option<PathBuf>> = RefCell::new(None);
+    static TEST_HOME_OVERRIDE: RefCell<Option<PathBuf>> = const { RefCell::new(None) };
 }
 
 thread_local! {
     /// Thread-local test-only environment overrides. Tests can set a key here
     /// to simulate environment variables without mutating the process-wide
     /// environment (avoids serializing tests).
+    #[allow(clippy::missing_const_for_thread_local)]
     static TEST_ENV_OVERRIDES: RefCell<HashMap<String, String>> = RefCell::new(HashMap::new());
 }
 
