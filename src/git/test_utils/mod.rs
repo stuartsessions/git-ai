@@ -2,13 +2,7 @@ use crate::authorship::attribution_tracker::Attribution;
 use crate::authorship::working_log::Checkpoint;
 
 mod tmp_repo;
-pub use tmp_repo::{TmpRepo, TmpFile};
-
-
-
-
-
-
+pub use tmp_repo::{TmpFile, TmpRepo};
 
 // @todo move this acunniffe
 /// Sanitized checkpoint representation for deterministic snapshots

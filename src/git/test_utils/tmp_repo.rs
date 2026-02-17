@@ -281,7 +281,10 @@ impl TmpRepo {
         } else {
             // Create a default path and store in local env_vars
             let test_db_path = std::env::temp_dir().join("git-ai-unit-test-db");
-            env_vars.insert("GIT_AI_TEST_DB_PATH".to_string(), test_db_path.to_string_lossy().to_string());
+            env_vars.insert(
+                "GIT_AI_TEST_DB_PATH".to_string(),
+                test_db_path.to_string_lossy().to_string(),
+            );
         }
 
         // Generate a robust, unique temporary directory path
@@ -321,7 +324,9 @@ impl TmpRepo {
 
     /// Set an environment variable for this repository
     pub fn set_env(&self, key: &str, value: &str) {
-        self.env_vars.borrow_mut().insert(key.to_string(), value.to_string());
+        self.env_vars
+            .borrow_mut()
+            .insert(key.to_string(), value.to_string());
     }
 
     /// Get an environment variable for this repository
@@ -588,7 +593,8 @@ impl TmpRepo {
 
     /// Merges a branch into the current branch using real git CLI, always picking 'theirs' in conflicts
     pub fn merge_branch(&self, branch_name: &str, message: &str) -> Result<(), GitAiError> {
-        let output = self.create_git_command()
+        let output = self
+            .create_git_command()
             .args(["merge", branch_name, "-m", message, "-X", "theirs"])
             .output()
             .map_err(|e| GitAiError::Generic(format!("Failed to run git merge: {}", e)))?;
@@ -623,7 +629,8 @@ impl TmpRepo {
         // First, get the current commit SHA before rebase
         // let old_sha = self.head_commit_sha()?;
 
-        let mut rebase = self.create_git_command()
+        let mut rebase = self
+            .create_git_command()
             .args(["rebase", onto_branch])
             .output()
             .map_err(|e| GitAiError::Generic(format!("Failed to run git rebase: {}", e)))?;
@@ -635,7 +642,8 @@ impl TmpRepo {
             // Find conflicted files (for our tests, just lines.md)
             let conflicted_file = self.path.join("lines.md");
             // Overwrite with theirs (the branch we're rebasing onto)
-            let theirs_content = self.create_git_command()
+            let theirs_content = self
+                .create_git_command()
                 .args(["show", &format!("{}:lines.md", onto_branch)])
                 .output()
                 .map_err(|e| GitAiError::Generic(format!("Failed to get theirs: {}", e)))?;
@@ -645,7 +653,8 @@ impl TmpRepo {
                 .args(["add", "lines.md"])
                 .output()
                 .map_err(|e| GitAiError::Generic(format!("Failed to git add: {}", e)))?;
-            rebase = self.create_git_command()
+            rebase = self
+                .create_git_command()
                 .args(["rebase", "--continue"])
                 .output()
                 .map_err(|e| {
@@ -700,7 +709,8 @@ impl TmpRepo {
         let mut args = vec!["cherry-pick"];
         args.extend(commits);
 
-        let output = self.create_git_command()
+        let output = self
+            .create_git_command()
             .args(&args)
             .output()
             .map_err(|e| GitAiError::Generic(format!("Failed to run git cherry-pick: {}", e)))?;
@@ -717,7 +727,8 @@ impl TmpRepo {
 
     /// Cherry-pick with expected conflicts (returns true if there were conflicts)
     pub fn cherry_pick_with_conflicts(&self, commit: &str) -> Result<bool, GitAiError> {
-        let output = self.create_git_command()
+        let output = self
+            .create_git_command()
             .args(["cherry-pick", commit])
             .output()
             .map_err(|e| GitAiError::Generic(format!("Failed to run git cherry-pick: {}", e)))?;
@@ -737,7 +748,8 @@ impl TmpRepo {
 
     /// Continue a cherry-pick after resolving conflicts
     pub fn cherry_pick_continue(&self) -> Result<(), GitAiError> {
-        let output = self.create_git_command()
+        let output = self
+            .create_git_command()
             .args(["cherry-pick", "--continue"])
             .env("GIT_EDITOR", "true") // Skip opening editor
             .output()
@@ -757,7 +769,8 @@ impl TmpRepo {
 
     /// Abort a cherry-pick operation
     pub fn cherry_pick_abort(&self) -> Result<(), GitAiError> {
-        let output = self.create_git_command()
+        let output = self
+            .create_git_command()
             .args(["cherry-pick", "--abort"])
             .output()
             .map_err(|e| {
@@ -1085,7 +1098,8 @@ impl TmpRepo {
         let _current_commit = self.repo_git2.find_commit(head.target().unwrap())?;
 
         // Use git CLI to amend the commit (this is simpler and more reliable)
-        let output = self.create_git_command()
+        let output = self
+            .create_git_command()
             .args([
                 "commit",
                 "--amend",
@@ -1118,7 +1132,8 @@ impl TmpRepo {
 
     /// Performs a squash merge of a branch into the current branch (stages changes without committing)
     pub fn merge_squash(&self, branch_name: &str) -> Result<(), GitAiError> {
-        let output = self.create_git_command()
+        let output = self
+            .create_git_command()
             .args(["merge", "--squash", branch_name])
             .output()
             .map_err(|e| GitAiError::Generic(format!("Failed to run git merge --squash: {}", e)))?;
@@ -1136,7 +1151,8 @@ impl TmpRepo {
     /// Merges a branch into the current branch, allowing conflicts to remain unresolved
     /// Returns Ok(true) if there are conflicts, Ok(false) if merge succeeded without conflicts
     pub fn merge_with_conflicts(&self, branch_name: &str) -> Result<bool, GitAiError> {
-        let output = self.create_git_command()
+        let output = self
+            .create_git_command()
             .args(["merge", branch_name, "--no-commit"])
             .output()
             .map_err(|e| GitAiError::Generic(format!("Failed to run git merge: {}", e)))?;
@@ -1170,7 +1186,8 @@ impl TmpRepo {
     pub fn resolve_conflict(&self, filename: &str, choose: &str) -> Result<(), GitAiError> {
         match choose {
             "ours" => {
-                let output = self.create_git_command()
+                let output = self
+                    .create_git_command()
                     .args(["checkout", "--ours", filename])
                     .output()
                     .map_err(|e| {
@@ -1185,7 +1202,8 @@ impl TmpRepo {
                 }
             }
             "theirs" => {
-                let output = self.create_git_command()
+                let output = self
+                    .create_git_command()
                     .args(["checkout", "--theirs", filename])
                     .output()
                     .map_err(|e| {
@@ -1214,7 +1232,8 @@ impl TmpRepo {
 
     /// Execute a git command directly (no hooks)
     pub fn git_command(&self, args: &[&str]) -> Result<(), GitAiError> {
-        let output = self.create_git_command()
+        let output = self
+            .create_git_command()
             .args(args)
             .output()
             .map_err(|e| GitAiError::Generic(format!("Failed to run git command: {}", e)))?;
@@ -1259,7 +1278,8 @@ impl TmpRepo {
         }
 
         // Run the actual git command
-        let output = self.create_git_command()
+        let output = self
+            .create_git_command()
             .args(&args)
             .output()
             .map_err(|e| GitAiError::Generic(format!("Failed to run git reset: {}", e)))?;

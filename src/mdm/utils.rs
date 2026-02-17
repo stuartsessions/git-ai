@@ -861,7 +861,7 @@ mod tests {
         // No local override is set, make sure test isn't scewed by existing env
         // variable in the test envrionment.
         assert_eq!(std::env::var("CODESPACES").ok(), None);
-        
+
         // Test when CODESPACES is not set
         set_test_env_override("CODESPACES", None);
         // Logic note: env_test_proxy checks environment after thread, so if
