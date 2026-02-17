@@ -483,11 +483,7 @@ fn test_opencode_e2e_checkpoint_and_commit() {
     let fixture_storage = opencode_storage_fixture_path();
     copy_dir_all(&fixture_storage, storage_path).unwrap();
 
-    // Set up environment for the test
-    set_test_env_override(
-        "GIT_AI_OPENCODE_STORAGE_PATH",
-        Some(storage_path.to_str().unwrap()),
-    );
+    let storage_path_str = storage_path.to_str().unwrap();
 
     // Create hook input for PreToolUse (human checkpoint)
     let pre_hook_input = json!({
@@ -501,8 +497,11 @@ fn test_opencode_e2e_checkpoint_and_commit() {
     .to_string();
 
     // Run human checkpoint
-    repo.git_ai(&["checkpoint", "opencode", "--hook-input", &pre_hook_input])
-        .unwrap();
+    repo.git_ai_with_env(
+        &["checkpoint", "opencode", "--hook-input", &pre_hook_input],
+        &[("GIT_AI_OPENCODE_STORAGE_PATH", storage_path_str)],
+    )
+    .unwrap();
 
     // Make AI edit
     fs::write(&file_path, "// initial\n// Hello World\n").unwrap();
@@ -519,11 +518,11 @@ fn test_opencode_e2e_checkpoint_and_commit() {
     .to_string();
 
     // Run AI checkpoint
-    repo.git_ai(&["checkpoint", "opencode", "--hook-input", &post_hook_input])
-        .unwrap();
-
-    // Clean up env var
-    set_test_env_override("GIT_AI_OPENCODE_STORAGE_PATH", None);
+    repo.git_ai_with_env(
+        &["checkpoint", "opencode", "--hook-input", &post_hook_input],
+        &[("GIT_AI_OPENCODE_STORAGE_PATH", storage_path_str)],
+    )
+    .unwrap();
 
     // Commit
     let commit = repo.stage_all_and_commit("Add AI line").unwrap();
