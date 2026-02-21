@@ -6,3 +6,4 @@
 prompts.db
 .benchmarks/
 __pycache__/
+.cargo/
